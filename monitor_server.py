@@ -1,3 +1,5 @@
+import json
+import os
 import time
 import iperf3
 import psutil
@@ -28,20 +30,6 @@ def iperf_server(port):
 
         if result.error:
             print(result.error)
-        else:
-            print('')
-            print('Test results from {0}:{1}'.format(result.remote_host,
-                                                     result.remote_port))
-            print('  started at         {0}'.format(result.time))
-            print('  bytes received     {0}'.format(result.received_bytes))
-
-            print('Average transmitted received in all sorts of networky formats:')
-            print('  bits per second      (bps)   {0}'.format(result.received_bps))
-            print('  Kilobits per second  (kbps)  {0}'.format(result.received_kbps))
-            print('  Megabits per second  (Mbps)  {0}'.format(result.received_Mbps))
-            print('  KiloBytes per second (kB/s)  {0}'.format(result.received_kB_s))
-            print('  MegaBytes per second (MB/s)  {0}'.format(result.received_MB_s))
-            print('')
 
 
 class MonitorServer:
@@ -79,6 +67,17 @@ class MonitorServer:
 
             print(data)
 
+            if not os.path.exists('resource.json'):
+                resource = []
+            else:
+                with open('resource.json', 'r') as f:
+                    resource = json.load(f)
+
+            resource.append(data)
+
+            with open('resource.json', 'w') as f:
+                json.dump(resource, f)
+
             # TODO: post resource to scheduler
 
             time.sleep(self.monitor_interval)
@@ -97,25 +96,12 @@ class MonitorServer:
         client.port = iperf3_port
         client.protocol = 'tcp'
 
-        print('Connecting to {0}:{1}'.format(client.server_hostname, client.port))
         result = client.run()
 
         if result.error:
             print(result.error)
         else:
-            print('')
-            print('Test completed:')
-            print('  started at         {0}'.format(result.time))
-            print('  bytes transmitted  {0}'.format(result.sent_bytes))
-            print('  retransmits        {0}'.format(result.retransmits))
-            print('  avg cpu load       {0}%\n'.format(result.local_cpu_total))
-
-            print('Average transmitted data in all sorts of networky formats:')
-            print('  bits per second      (bps)   {0}'.format(result.sent_bps))
-            print('  Kilobits per second  (kbps)  {0}'.format(result.sent_kbps))
-            print('  Megabits per second  (Mbps)  {0}'.format(result.sent_Mbps))
-            print('  KiloBytes per second (kB/s)  {0}'.format(result.sent_kB_s))
-            print('  MegaBytes per second (MB/s)  {0}'.format(result.sent_MB_s))
+            print(f'bandwidth: {result.sent_Mbps} Mbps')
 
         self.bandwidth = result.sent_Mbps
 
