@@ -9,18 +9,23 @@ import eventlet
 
 from log import LOGGER
 from client import http_request
+from utils import *
 
-interval = 3
+interval = 5
 iperf3_ports = [5201, 5202]
 iperf3_server = False
 iperf3_port = 5201
 
 iperf3_server_ip = '114.212.81.11'
+scheduler_ip = '114.212.81.11'
+scheduler_port = 8140
+scheduler_path = 'resource'
+
 
 def iperf_server(port):
     server = iperf3.Server()
     server.port = port
-    print('Running server: {0}:{1}'.format(server.bind_address, server.port))
+    LOGGER.debug('Running iperf3 server: {0}:{1}'.format(server.bind_address, server.port))
 
     while True:
         try:
@@ -53,7 +58,7 @@ class MonitorServer:
                 threading.Thread(target=self.get_cpu),
                 threading.Thread(target=self.get_memory),
                 threading.Thread(target=self.get_bandwidth),
-                threading.Thread(target=self.get_total_bandwidth)
+                # threading.Thread(target=self.get_total_bandwidth)
             ]
             for thread in threads:
                 thread.start()
@@ -62,23 +67,12 @@ class MonitorServer:
             for thread in threads:
                 thread.join()
 
-            data = {'cpu': self.cpu, 'memory': self.mem, 'bandwidth': self.bandwidth,
-                    'total_bandwidth': self.total_bandwidth, 'is_server': iperf3_server}
+            data = {'cpu': self.cpu, 'memory': self.mem, 'bandwidth': self.bandwidth, 'is_server': iperf3_server}
 
-            print(data)
+            LOGGER.debug('resource info:', data)
 
-            if not os.path.exists('resource.json'):
-                resource = []
-            else:
-                with open('resource.json', 'r') as f:
-                    resource = json.load(f)
-
-            resource.append(data)
-
-            with open('resource.json', 'w') as f:
-                json.dump(resource, f)
-
-            # TODO: post resource to scheduler
+            resource_post_url = get_merge_address(scheduler_ip, port=scheduler_port, path=scheduler_path)
+            http_request(resource_post_url, method='POST', json={'device': get_host_ip(), 'resource': data})
 
             time.sleep(self.monitor_interval)
 
@@ -96,12 +90,15 @@ class MonitorServer:
         client.port = iperf3_port
         client.protocol = 'tcp'
 
-        result = client.run()
+        eventlet.monkey_patch()
+        try:
+            with eventlet.Timeout(2, True):
+                result = client.run()
+        except eventlet.timeout.Timeout:
+            LOGGER.warning('connect to server timeout!')
 
         if result.error:
-            print(result.error)
-        else:
-            print(f'bandwidth: {result.sent_Mbps} Mbps')
+            LOGGER.warning('resource monitor iperf3 error:', result.error)
 
         self.bandwidth = result.sent_Mbps
 
