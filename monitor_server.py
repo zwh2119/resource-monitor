@@ -68,7 +68,7 @@ class MonitorServer:
 
             data = {'cpu': self.cpu, 'memory': self.mem, 'bandwidth': self.bandwidth, 'is_server': iperf3_server}
 
-            LOGGER.debug('resource info:', data)
+            LOGGER.debug(f'resource info: {data}')
 
             resource_post_url = get_merge_address(scheduler_ip, port=scheduler_port, path=scheduler_path)
             http_request(resource_post_url, method='POST', json={'device': get_host_ip(), 'resource': data})
@@ -95,7 +95,7 @@ class MonitorServer:
                 result = client.run()
 
             if result.error:
-                LOGGER.warning('resource monitor iperf3 error:', result.error)
+                LOGGER.warning(f'resource monitor iperf3 error: {result.error}')
 
             self.bandwidth = result.sent_Mbps
 
