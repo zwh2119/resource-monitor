@@ -1,5 +1,4 @@
-import json
-import os
+
 import time
 import iperf3
 import psutil
@@ -94,13 +93,14 @@ class MonitorServer:
         try:
             with eventlet.Timeout(2, True):
                 result = client.run()
+
+            if result.error:
+                LOGGER.warning('resource monitor iperf3 error:', result.error)
+
+            self.bandwidth = result.sent_Mbps
+
         except eventlet.timeout.Timeout:
             LOGGER.warning('connect to server timeout!')
-
-        if result.error:
-            LOGGER.warning('resource monitor iperf3 error:', result.error)
-
-        self.bandwidth = result.sent_Mbps
 
     def get_total_bandwidth(self):
         start_upload = psutil.net_io_counters().bytes_sent * 8 / 1024 / 1024
