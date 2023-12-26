@@ -17,8 +17,9 @@ iperf3_port = 5201
 
 iperf3_server_ip = '114.212.81.11'
 scheduler_ip = '114.212.81.11'
-scheduler_port = 8140
-scheduler_path = 'resource'
+
+
+scheduler_port = 9400
 
 
 def iperf_server(port):
@@ -70,7 +71,7 @@ class MonitorServer:
 
             LOGGER.debug(f'resource info: {data}')
 
-            resource_post_url = get_merge_address(scheduler_ip, port=scheduler_port, path=scheduler_path)
+            resource_post_url = get_merge_address(scheduler_ip, port=scheduler_port, path='resource')
             http_request(resource_post_url, method='POST', json={'device': get_host_ip(), 'resource': data})
 
             time.sleep(self.monitor_interval)
