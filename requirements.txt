@@ -2,3 +2,4 @@ colorlog
 eventlet
 iperf3
 requests
+psutil
