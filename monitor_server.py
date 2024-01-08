@@ -49,7 +49,7 @@ class MonitorServer:
             self.iperf3_ports = eval(Context.get_parameters('iperf3_ports'))
             self.run_iperf_server()
         else:
-            self.iper3_port = Context.get_parameters('iperf3_port')
+            self.iperf3_port = Context.get_parameters('iperf3_port')
 
     def run(self):
         while True:
