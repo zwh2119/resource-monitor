@@ -8,6 +8,6 @@ COPY ./requirements.txt ./
 RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 WORKDIR /app
-COPY ${dir}/client.py ${dir}/log.py ${dir}/monitor_server.py ${dir}/utils.py /app/
+COPY ${dir}/client.py ${dir}/log.py ${dir}/monitor_server.py ${dir}/utils.py ${dir}/config.py /app/
 
 CMD ["python3", "monitor_server.py"]

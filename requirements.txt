@@ -3,3 +3,4 @@ eventlet
 iperf3
 requests
 psutil
+kubernetes==20.11.0a1

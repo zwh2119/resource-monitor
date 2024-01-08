@@ -1,4 +1,3 @@
-
 import time
 import iperf3
 import psutil
@@ -9,17 +8,7 @@ import eventlet
 from log import LOGGER
 from client import http_request
 from utils import *
-
-interval = 5
-iperf3_ports = [5201, 5202]
-iperf3_server = False
-iperf3_port = 5201
-
-iperf3_server_ip = '114.212.81.11'
-scheduler_ip = '114.212.81.11'
-
-
-scheduler_port = 9400
+from config import Context
 
 
 def iperf_server(port):
@@ -39,7 +28,14 @@ def iperf_server(port):
 
 class MonitorServer:
     def __init__(self):
-        self.monitor_interval = interval
+        self.local_ip = get_nodes_info()[Context.get_parameters('NODE_NAME')]
+        self.monitor_interval = eval(Context.get_parameters('interval'))
+        self.iperf3_server = eval(Context.get_parameters('iperf3_server'))
+
+        node_info = get_nodes_info()
+        self.iperf3_server_ip = node_info[Context.get_parameters('iperf3_server_name')]
+        self.scheduler_ip = node_info[Context.get_parameters('scheduler_name')]
+        self.scheduler_port = Context.get_parameters('scheduler_port')
 
         self.cpu = 0
         self.mem = 0
@@ -49,17 +45,25 @@ class MonitorServer:
         # the first computing of cpu is 0
         self.get_cpu()
 
-        if iperf3_server:
+        if self.iperf3_server:
+            self.iperf3_ports = eval(Context.get_parameters('iperf3_ports'))
             self.run_iperf_server()
+        else:
+            self.iper3_port = Context.get_parameters('iperf3_port')
 
     def run(self):
         while True:
             threads = [
                 threading.Thread(target=self.get_cpu),
                 threading.Thread(target=self.get_memory),
-                threading.Thread(target=self.get_bandwidth),
-                # threading.Thread(target=self.get_total_bandwidth)
             ]
+            if not self.iperf3_server:
+                threads.extend(
+                    [threading.Thread(target=self.get_bandwidth),
+                     # threading.Thread(target=self.get_total_bandwidth)
+                     ]
+                )
+
             for thread in threads:
                 thread.start()
 
@@ -67,12 +71,12 @@ class MonitorServer:
             for thread in threads:
                 thread.join()
 
-            data = {'cpu': self.cpu, 'memory': self.mem, 'bandwidth': self.bandwidth, 'is_server': iperf3_server}
+            data = {'cpu': self.cpu, 'memory': self.mem, 'bandwidth': self.bandwidth, 'is_server': self.iperf3_server}
 
             LOGGER.debug(f'resource info: {data}')
 
-            resource_post_url = get_merge_address(scheduler_ip, port=scheduler_port, path='resource')
-            http_request(resource_post_url, method='POST', json={'device': get_host_ip(), 'resource': data})
+            resource_post_url = get_merge_address(self.scheduler_ip, port=self.scheduler_port, path='resource')
+            http_request(resource_post_url, method='POST', json={'device': self.local_ip, 'resource': data})
 
             time.sleep(self.monitor_interval)
 
@@ -86,8 +90,8 @@ class MonitorServer:
 
         client = iperf3.Client()
         client.duration = 1
-        client.server_hostname = iperf3_server_ip
-        client.port = iperf3_port
+        client.server_hostname = self.iperf3_server_ip
+        client.port = self.iperf3_port
         client.protocol = 'tcp'
 
         eventlet.monkey_patch()
@@ -110,7 +114,7 @@ class MonitorServer:
         self.total_bandwidth = end_upload - start_upload
 
     def run_iperf_server(self):
-        for port in iperf3_ports:
+        for port in self.iperf3_ports:
             threading.Thread(target=iperf_server, args=(port,)).start()
 
 

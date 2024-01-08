@@ -1,5 +1,5 @@
 import socket
-
+from kubernetes import client, config
 
 def get_merge_address(ip, protocal='http', port=None, path=None):
     """
@@ -32,3 +32,20 @@ def get_host_ip():
         s.close()
 
     return ip
+
+
+def get_nodes_info():
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+    nodes = v1.list_node().items
+
+    node_dict = {}
+
+    for node in nodes:
+        node_name = node.metadata.name
+        addresses = node.status.addresses
+        for address in addresses:
+            if address.type == "InternalIP":
+                node_dict[node_name] = address.address
+
+    return node_dict
